@@ -7,12 +7,88 @@ import requests
 import json
 import io
 
+# تجب تهيئة الصفحة في البداية دائماً
 st.set_page_config(
     page_title="محلل البيانات الذكي - لوحة تحكم تفاعلية",
     page_icon="📊",
     layout="wide",
     initial_sidebar_state="expanded"
 )
+
+# =====================================================================
+# 🔐 نظام حماية التطبيق برمز المرور (License Key)
+# =====================================================================
+
+# 1. قائمة برموز المرور التي يمكنك بيعها للمستخدمين (تستطيع تعديلها أو إضافة رموز جديدة هنا)
+VALID_LICENSE_KEYS = [
+    "PRO-DASHBOARD-7721",
+    "VIP-ANALYTICS-2026",
+    "USER-DEMO-9981",
+    "KEY-X87F-991A"
+]
+
+if "license_active" not in st.session_state:
+    st.session_state["license_active"] = False
+
+# إذا لم يكن الترخيص نشطاً، اعرض واجهة قفل التطبيق فقط واقطع الاتصال بالباقي
+if not st.session_state["license_active"]:
+    st.markdown("""
+        <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700&display=swap');
+        html, body, [class*="css"] {
+            font-family: 'Cairo', sans-serif;
+            text-align: right;
+            direction: RTL;
+        }
+        .gate-container {
+            background: linear-gradient(135deg, #1E3A8A 0%, #3B82F6 100%);
+            color: white;
+            padding: 2.5rem;
+            border-radius: 15px;
+            text-align: center;
+            max-width: 600px;
+            margin: 4rem auto 2rem auto;
+            box-shadow: 0 10px 25px rgba(30, 58, 138, 0.2);
+        }
+        .gate-card {
+            background-color: #f8fafc;
+            padding: 2rem;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        </style>
+    """, unsafe_allow_html=True)
+
+    st.markdown("""
+        <div class="gate-container">
+            <span style="font-size: 3.5rem;">🔑</span>
+            <h2 style="margin-top: 1rem; color: white;">تفعيل لوحة التحكم الذكية</h2>
+            <p style="font-size: 1.1rem; opacity: 0.9;">هذا التطبيق مدفوع ومحمي بموجب رخصة الاستخدام الرقمية.</p>
+        </div>
+    """, unsafe_allow_html=True)
+
+    with st.container():
+        st.markdown('<div class="gate-card">', unsafe_allow_html=True)
+        license_input = st.text_input("أدخل مفتاح الترخيص الخاص بك (License Key):", type="password", placeholder="مثال: PRO-DASHBOARD-XXXX")
+        
+        if st.button("تفعيل فوري وتدشين اللوحة 🚀", use_container_width=True):
+            if license_input in VALID_LICENSE_KEYS:
+                st.session_state["license_active"] = True
+                st.success("🎉 تم تفعيل نسختك بنجاح! جاري تحميل لوحة التحكم...")
+                st.rerun()
+            else:
+                st.error("❌ رمز الترخيص غير صحيح! يرجى التأكد من الرمز أو الشراء من المالك.")
+                st.info("💡 للحصول على مفتاح ترخيص جديد ومميز، يرجى التواصل مع مطور ومُلاك هذه المنصة.")
+        st.markdown('</div>', unsafe_allow_html=True)
+    
+    # إيقاف تشغيل بقية الكود طالما لم يتم التفعيل
+    st.stop()
+
+# =====================================================================
+# 📊 كود لوحة التحكم الأصلي بالكامل (يعمل فقط بعد إدخال الرمز الصحيح)
+# =====================================================================
 
 # Custom CSS for modern UI, Arabic RTL direction, and smooth fonts
 st.markdown("""
@@ -65,7 +141,6 @@ def query_gemini_api(api_key, df_summary, user_question):
     if not api_key:
         return "⚠️ يرجى إدخال مفتاح API لـ Gemini في الشريط الجانبي لتفعيل المساعد الذكي."
     
-    # We construct a rich context for the LLM to understand the dataset's structure
     prompt = f"""
     لقد تم تحميل مجموعة بيانات في لوحة التحكم. إليك تفاصيل البيانات وملخصها الإحصائي:
     
@@ -86,7 +161,6 @@ def query_gemini_api(api_key, df_summary, user_question):
     }
     
     try:
-        # Appending key to URL parameters
         response = requests.post(f"{url}?key={api_key}", headers=headers, json=payload, timeout=30)
         if response.status_code == 200:
             result = response.json()
@@ -118,7 +192,7 @@ with st.sidebar:
     st.markdown("---")
     st.markdown(
         "<div style='text-align: center; font-size: 0.85rem; color: gray;'>"
-        "لوحة تحكم ذكية تم تطويرها بواسطة مطور الويب المحترف الخاص بك 🚀"
+        "نسخة مفعلة ومرخصة بنجاح ✅"
         "</div>", 
         unsafe_allow_html=True
     )
@@ -138,7 +212,6 @@ if uploaded_file is not None:
         else:
             df = pd.read_excel(uploaded_file)
             
-        # Ensure there are no styling bugs with empty columns
         df = df.loc[:, ~df.columns.str.contains('^Unnamed')]
         
         col1, col2, col3, col4 = st.columns(4)
@@ -205,18 +278,15 @@ if uploaded_file is not None:
             with col_v2:
                 x_axis = st.selectbox("المحور السيني (X-Axis)", all_cols)
             with col_v3:
-                # Fallback to same axis or numerical if available
                 y_default = num_cols[0] if num_cols else all_cols[0]
                 y_axis = st.selectbox("المحور الصادي (Y-Axis)", all_cols, index=all_cols.index(y_default))
                 
-            # Extra customization options
             col_opt1, col_opt2 = st.columns(2)
             with col_opt1:
                 color_by = st.selectbox("تلوين وتقسيم البيانات بواسطة (اختياري)", ["بلا تلوين"] + all_cols)
             with col_opt2:
                 chart_title = st.text_input("عنوان مخصص للرسم البياني", f"{chart_type} لـ {y_axis} مقابل {x_axis}")
             
-            # Generating Chart based on selection
             color_param = color_by if color_by != "بلا تلوين" else None
             fig = None
             
@@ -228,7 +298,6 @@ if uploaded_file is not None:
                 elif chart_type == "مخطط مبعثر (Scatter)":
                     fig = px.scatter(df, x=x_axis, y=y_axis, color=color_param, title=chart_title, template="plotly_white")
                 elif chart_type == "مخطط دائري (Pie)":
-                    # For pie, aggregate if there's duplicate X categories
                     pie_data = df.groupby(x_axis)[y_axis].sum().reset_index() if y_axis in num_cols else df[x_axis].value_counts().reset_index()
                     pie_data.columns = [x_axis, y_axis]
                     fig = px.pie(pie_data, names=x_axis, values=y_axis, title=chart_title, template="plotly_white")
@@ -236,7 +305,6 @@ if uploaded_file is not None:
                     fig = px.box(df, x=x_axis, y=y_axis, color=color_param, title=chart_title, template="plotly_white")
                 
                 if fig:
-                    # Aesthetic touches to the generated plotly chart
                     fig.update_layout(
                         font_family="Cairo",
                         title_font_size=20,
@@ -255,8 +323,6 @@ if uploaded_file is not None:
             st.markdown("### 🤖 اسأل محلل البيانات الذكي (AI Assistant)")
             st.write("يقوم المساعد الذكي بدراسة الهيكل العام لبياناتك، مسميات الأعمدة، والملخص الإحصائي، ثم يجيب على أي سؤال تطرحه لمساعدتك في استخراج القيمة الحقيقية للبيانات.")
             
-            # Prepare summarized information of the dataset for the API
-            # Limit head representation to reduce token sizes while keeping structural information clear
             buffer = io.StringIO()
             df.info(buf=buffer)
             info_summary = buffer.getvalue()
@@ -278,7 +344,6 @@ if uploaded_file is not None:
             {sample_data}
             """
             
-            # Quick suggestions
             st.markdown("**💡 أسئلة مقترحة سريعة:**")
             suggestions = [
                 "ما هي الملاحظات الأساسية والأنماط الهامة التي يمكنك استنتاجها من عينة وملخص هذه البيانات؟",
@@ -291,7 +356,7 @@ if uploaded_file is not None:
             user_input = st.text_area(
                 "اكتب سؤالك التفصيلي هنا بكل وضوح:",
                 value="" if selected_suggestion == "-- اختر سؤالاً مقترحاً --" else selected_suggestion,
-                placeholder="مثال: هل هناك علاقة واضحة بين الأعمدة؟ أو أي أفكار تسويقية تقترحها علي من هذه البيانات؟"
+                placeholder="مثال: هل هناك علاقة واضحة بين الأعمدة؟ أو أي أفكار تسويقية تقترحها علي من هذه البيانات?"
             )
             
             if st.button("🚀 اطلب التحليل الآن", use_container_width=True):
@@ -317,7 +382,7 @@ else:
             <span style="font-size: 4rem;">📥</span>
             <h3 style="margin-top: 1rem; color: #1E3A8A;">بانتظار رفع ملف البيانات الخاص بك</h3>
             <p style="color: #64748b; max-width: 600px; margin: 0 auto;">
-                الرجاء سحب وإفلات ملف Excel أو CSV في الجزء المخصص بالشريط الجانبي (على اليمين أو اليسار بحسب لغة متصفحك) للبدء في استخراج البيانات وبناء اللوحة التفاعلية فوراً.
+                الرجاء سحب وإفلات ملف Excel أو CSV في الجزء المخصص بالشريط الجانبي للبدء في استخراج البيانات وبناء اللوحة التفاعلية فوراً.
             </p>
         </div>
     """, unsafe_allow_html=True)
